@@ -77,6 +77,13 @@ docling-serve-rocm-image: Containerfile ## Build docling-serve container image w
 	$(CMD_PREFIX) $(CONTAINER_RUNTIME) tag ghcr.io/docling-project/docling-serve-rocm:$(TAG) ghcr.io/docling-project/docling-serve-rocm:$(BRANCH_TAG)
 	$(CMD_PREFIX) $(CONTAINER_RUNTIME) tag ghcr.io/docling-project/docling-serve-rocm:$(TAG) quay.io/docling-project/docling-serve-rocm:$(BRANCH_TAG)
 
+.PHONY: docling-serve-rocm71-image
+docling-serve-rocm71-image: Containerfile ## Build docling-serve container image with ROCm support
+	$(ECHO_PREFIX) printf "  %-12s Containerfile\n" "[docling-serve with ROCm 7.1]"
+	$(CMD_PREFIX) $(CONTAINER_RUNTIME) build --load --build-arg "UV_SYNC_EXTRA_ARGS=--no-group pypi --group rocm71 --no-extra flash-attn" -f Containerfile --platform linux/amd64 -t ghcr.io/docling-project/docling-serve-rocm71:$(TAG) .
+	$(CMD_PREFIX) $(CONTAINER_RUNTIME) tag ghcr.io/docling-project/docling-serve-rocm71:$(TAG) ghcr.io/docling-project/docling-serve-rocm71:$(BRANCH_TAG)
+	$(CMD_PREFIX) $(CONTAINER_RUNTIME) tag ghcr.io/docling-project/docling-serve-rocm71:$(TAG) quay.io/docling-project/docling-serve-rocm71:$(BRANCH_TAG)
+
 .PHONY: docling-serve-rocm72-image
 docling-serve-rocm72-image: Containerfile ## Build docling-serve container image with ROCm 7.2 support
 	$(ECHO_PREFIX) printf "  %-12s Containerfile\n" "[docling-serve with ROCm 7.2]"
@@ -165,6 +172,20 @@ run-docling-rocm: ## Run the docling-serve container with GPU support and assign
 	$(CMD_PREFIX) $(CONTAINER_RUNTIME) rm -f docling-serve-rocm 2>/dev/null || true
 	$(ECHO_PREFIX) printf "  %-12s Running docling-serve container with GPU support on port 5001...\n" "[RUN ROCm 6.3]"
 	$(CMD_PREFIX) $(CONTAINER_RUNTIME) run -it --name docling-serve-rocm -p 5001:5001 ghcr.io/docling-project/docling-serve-rocm:main
+
+.PHONY: run-docling-rocm71
+run-docling-rocm71: ## Run the docling-serve container with ROCm 7.1 support and assign a container name
+	$(ECHO_PREFIX) printf "  %-12s Removing existing container if it exists...\n" "[CLEANUP]"
+	$(CMD_PREFIX) $(CONTAINER_RUNTIME) rm -f docling-serve-rocm71 2>/dev/null || true
+	$(ECHO_PREFIX) printf "  %-12s Running docling-serve container with ROCm 7.1 support on port 5001...\n" "[RUN ROCm 7.1]"
+	$(CMD_PREFIX) $(CONTAINER_RUNTIME) run -it --name docling-serve-rocm71 -p 5001:5001 \
+		--device /dev/kfd:/dev/kfd \
+		--device /dev/dri:/dev/dri \
+		--group-add $(shell getent group video | cut -d: -f3) \
+		--group-add $(shell getent group render | cut -d: -f3) \
+		-e TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1 \
+		-e DOCLING_SERVE_ENABLE_UI=true \
+		ghcr.io/docling-project/docling-serve-rocm71:main
 
 .PHONY: run-docling-rocm72
 run-docling-rocm72: ## Run the docling-serve container with ROCm 7.2 support and assign a container name
